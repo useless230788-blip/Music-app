@@ -7,7 +7,6 @@ export default async function handler(req, res) {
     try {
         // If we don't have the URL, look it up using the song ID
         if (!finalEncryptedUrl && song_id) {
-            // Extract the real token from the end of the URL if it's a full link
             let token = song_id;
             if (token.includes('/')) {
                 token = token.split('/').pop();
@@ -29,8 +28,12 @@ export default async function handler(req, res) {
 
             try {
                 const detailsData = JSON.parse(detailsText);
-                // Try multiple possible fields for the encrypted URL
                 finalEncryptedUrl = detailsData.encrypted_media_url || detailsData.media_url || detailsData.more_info?.encrypted_media_url;
+                
+                // IF IT STILL FAILS, REVEAL WHAT JIOSAAVN SENT BACK
+                if (!finalEncryptedUrl) {
+                    return res.status(500).json({ error: "GetDetails returned no URL. Raw JioSaavn response: " + detailsText.substring(0, 150) });
+                }
             } catch(e) {
                 return res.status(500).json({ error: "Details Parse Error: " + detailsText.substring(0, 100) });
             }

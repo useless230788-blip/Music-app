@@ -66,9 +66,9 @@
         </div>
         <div class="controls">
             <div class="buttons">
-                <button> shuffle </button>
+                <button> 🔀 </button>
                 <button class="play-btn" onclick="togglePlay()">▶️</button>
-                <button> repeat </button>
+                <button> 🔁 </button>
             </div>
             <div class="progress-container">
                 <span class="time" id="currentTime">0:00</span>
@@ -156,19 +156,29 @@
             playBtn.innerText = '⏳';
 
             try {
-                const encryptedUrl = song?.more_info?.encrypted_media_url;
+                // Try to get the URL from the search results, OR use the song ID as a fallback
+                const encryptedUrl = song?.more_info?.encrypted_media_url || song?.encrypted_media_url;
+                const songId = song?.id;
                 
-                if (!encryptedUrl) {
-                    alert("Error: This song does not have an encrypted URL. Try another song.");
+                if (!encryptedUrl && !songId) {
+                    alert("Error: Cannot find data to play this song.");
                     playBtn.innerText = '▶️';
                     return;
                 }
 
-                const res = await fetch(`/api/song?url=${encodeURIComponent(encryptedUrl)}`);
+                // Build the fetch URL
+                let fetchUrl = '/api/song?';
+                if (encryptedUrl) {
+                    fetchUrl += `url=${encodeURIComponent(encryptedUrl)}`;
+                } else if (songId) {
+                    fetchUrl += `song_id=${encodeURIComponent(songId)}`;
+                }
+
+                const res = await fetch(fetchUrl);
                 
                 if (!res.ok) {
                     const errorData = await res.json().catch(() => ({}));
-                    alert("Server Error: " + (errorData.error || "Failed to get URL from Vercel"));
+                    alert("Server Error: " + (errorData.error || "Failed"));
                     playBtn.innerText = '▶️';
                     return;
                 }
@@ -177,10 +187,10 @@
                 
                 if(data.auth_url) {
                     audioPlayer.src = data.auth_url;
-                    audioPlayer.play().catch(e => alert("Browser blocked autoplay. Press the Play button manually."));
+                    audioPlayer.play().catch(e => alert("Press the Play button manually."));
                     playBtn.innerText = '⏸️';
                 } else {
-                    alert("Error: API did not return a valid auth_url. JioSaavn might have blocked the server.");
+                    alert("Error: API did not return a valid auth_url.");
                     playBtn.innerText = '▶️';
                 }
             } catch (error) {

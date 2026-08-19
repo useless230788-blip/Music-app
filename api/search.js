@@ -1,7 +1,6 @@
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     const { q } = req.query;
-    
     if (!q) return res.status(400).json({ error: "Query is required" });
 
     const url = `https://www.jiosaavn.com/api.php?__call=search.getResults&_format=json&_marker=0&cc=in&includeMetaTags=true&q=${encodeURIComponent(q)}`;
@@ -20,6 +19,18 @@ export default async function handler(req, res) {
         }
 
         const data = await response.json();
+        
+        // FIX: JioSaavn sometimes returns more_info as a string, we must convert it
+        if (data.results) {
+            data.results.forEach(song => {
+                if (song.more_info && typeof song.more_info === 'string') {
+                    try {
+                        song.more_info = JSON.parse(song.more_info);
+                    } catch(e) {}
+                }
+            });
+        }
+        
         res.status(200).json(data);
     } catch (error) {
         console.error("Search error:", error);

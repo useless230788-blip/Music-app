@@ -11,17 +11,19 @@ export default async function handler(req, res) {
 
     try {
         const promises = categories.map(async (cat) => {
-            const url = `https://www.jiosaavn.com/api.php?__call=search.getResults&_format=json&_marker=0&cc=in&includeMetaTags=true&q=${encodeURIComponent(cat.q)}`;
+            // Using the NEW webapi.get endpoint
+            const url = `https://www.jiosaavn.com/api.php?__call=webapi.get&_format=json&_marker=0&context=android&token=${encodeURIComponent(cat.q)}&type=song&p=1&n=20`;
             const response = await fetch(url, {
                 headers: {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                    'Accept': 'application/json, text/plain, */*',
                     'Referer': 'https://www.jiosaavn.com/'
                 }
             });
             const data = await response.json();
-            const songs = data.results || [];
+            let songs = data?.songs?.results || [];
             
-            // Fix: Parse more_info if it's a string
+            // Safely parse more_info
             songs.forEach(song => {
                 if (song.more_info && typeof song.more_info === 'string') {
                     try { song.more_info = JSON.parse(song.more_info); } catch(e) {}

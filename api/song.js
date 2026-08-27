@@ -5,14 +5,14 @@ export default async function handler(req, res) {
     let finalEncryptedUrl = encryptedUrl;
 
     try {
-        // If we don't have the URL, look it up using the song ID
         if (!finalEncryptedUrl && song_id) {
             let token = song_id;
             if (token.includes('/')) {
                 token = token.split('/').pop();
             }
             
-            const detailsUrl = `https://www.jiosaavn.com/api.php?__call=song.getDetails&p=${encodeURIComponent(token)}&_format=json&_marker=0`;
+            // Use the NEW webapi.get endpoint
+            const detailsUrl = `https://www.jiosaavn.com/api.php?__call=webapi.get&token=${encodeURIComponent(token)}&type=song&_format=json&_marker=0`;
             const detailsRes = await fetch(detailsUrl, {
                 headers: {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
@@ -28,11 +28,16 @@ export default async function handler(req, res) {
 
             try {
                 const detailsData = JSON.parse(detailsText);
-                finalEncryptedUrl = detailsData.encrypted_media_url || detailsData.media_url || detailsData.more_info?.encrypted_media_url;
                 
-                // IF IT STILL FAILS, REVEAL WHAT JIOSAAVN SENT BACK
+                // Extract URL from the new webapi response format
+                if (detailsData.songs && detailsData.songs.length > 0) {
+                    finalEncryptedUrl = detailsData.songs[0].more_info?.encrypted_media_url || detailsData.songs[0].encrypted_media_url;
+                } else {
+                    finalEncryptedUrl = detailsData.encrypted_media_url || detailsData.media_url || detailsData.more_info?.encrypted_media_url;
+                }
+                
                 if (!finalEncryptedUrl) {
-                    return res.status(500).json({ error: "GetDetails returned no URL. Raw JioSaavn response: " + detailsText.substring(0, 150) });
+                    return res.status(500).json({ error: "WebAPI returned no URL. Raw: " + detailsText.substring(0, 150) });
                 }
             } catch(e) {
                 return res.status(500).json({ error: "Details Parse Error: " + detailsText.substring(0, 100) });

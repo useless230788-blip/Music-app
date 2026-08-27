@@ -3,8 +3,8 @@ export default async function handler(req, res) {
     const { q } = req.query;
     if (!q) return res.status(400).json({ error: "Query is required" });
 
-    // Using the NEW webapi.get endpoint for searching
-    const url = `https://www.jiosaavn.com/api.php?__call=webapi.get&_format=json&_marker=0&context=android&token=${encodeURIComponent(q)}&type=song&p=1&n=20`;
+    // Using the autocomplete endpoint which returns URLs directly
+    const url = `https://www.jiosaavn.com/api.php?__call=autocomplete.get&_format=json&_marker=0&query=${encodeURIComponent(q)}`;
 
     try {
         const response = await fetch(url, {
@@ -21,15 +21,8 @@ export default async function handler(req, res) {
 
         const data = await response.json();
         
-        // Extract the songs array from the new format
-        let songs = data?.songs?.results || [];
-        
-        // Safely parse more_info if JioSaavn returned it as a string
-        songs.forEach(song => {
-            if (song.more_info && typeof song.more_info === 'string') {
-                try { song.more_info = JSON.parse(song.more_info); } catch(e) {}
-            }
-        });
+        // Extract the songs array from the autocomplete response
+        let songs = data?.songs?.data || [];
         
         res.status(200).json({ results: songs });
     } catch (error) {

@@ -3,7 +3,8 @@ export default async function handler(req, res) {
     const { q } = req.query;
     if (!q) return res.status(400).json({ error: "Query is required" });
 
-    const url = `https://www.jiosaavn.com/api.php?__call=search.getResults&_format=json&_marker=0&cc=in&includeMetaTags=true&q=${encodeURIComponent(q)}`;
+    // Using the NEW webapi.get endpoint for searching
+    const url = `https://www.jiosaavn.com/api.php?__call=webapi.get&_format=json&_marker=0&context=android&token=${encodeURIComponent(q)}&type=song&p=1&n=20`;
 
     try {
         const response = await fetch(url, {
@@ -20,18 +21,17 @@ export default async function handler(req, res) {
 
         const data = await response.json();
         
-        // FIX: JioSaavn sometimes returns more_info as a string, we must convert it
-        if (data.results) {
-            data.results.forEach(song => {
-                if (song.more_info && typeof song.more_info === 'string') {
-                    try {
-                        song.more_info = JSON.parse(song.more_info);
-                    } catch(e) {}
-                }
-            });
-        }
+        // Extract the songs array from the new format
+        let songs = data?.songs?.results || [];
         
-        res.status(200).json(data);
+        // Safely parse more_info if JioSaavn returned it as a string
+        songs.forEach(song => {
+            if (song.more_info && typeof song.more_info === 'string') {
+                try { song.more_info = JSON.parse(song.more_info); } catch(e) {}
+            }
+        });
+        
+        res.status(200).json({ results: songs });
     } catch (error) {
         console.error("Search error:", error);
         res.status(500).json({ error: "Failed to fetch songs" });
